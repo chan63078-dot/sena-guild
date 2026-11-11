@@ -504,7 +504,7 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
         var q = deckQuery(d.heroes), n = q ? countFor(q) : 0;
         return n ? '<button class="btn counter" data-act="find-counter" data-q="'+esc(q)+'">⚔ 이 덱 잡는 공략 보기 (전용 '+n+'개)</button>' : '';
       })() +
-      (ui.editMode && !old ? '<div class="foot"><span></span><button class="btn" data-act="d-edit" data-id="'+esc(d.id)+'">수정</button></div>' : '') +
+      (ui.editMode && ui.canEdit && !old ? '<div class="foot"><span></span><button class="btn" data-act="d-edit" data-id="'+esc(d.id)+'">수정</button></div>' : '') +
       '</article>';
   }
   /* ---------- 공략 모음 ---------- */
@@ -839,12 +839,14 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
     var h = '<div class="wrap">' +
       '<header class="top"><div class="banner">' + (GIMG.banner ? '<img src="'+esc(GIMG.banner)+'" alt="">' : '') + '<div class="brand"><div class="kicker">SEVEN KNIGHTS RE:BIRTH</div><h1>길드전<br><em>족보</em></h1><div class="meta">' +
       (isGuide ? '공략 '+(G.items||[]).length+'개' : isDef ?
-        (ui.editMode ? '<label>기준일 <input id="dver" value="'+esc(D.version)+'"></label>' : esc(D.version)+' 기준') + ' · 추천덱 '+D.decks.length+'개' :
-        (ui.editMode ? '<label>버전 <input id="ver" value="'+esc(state.version)+'"></label>' : esc(state.updated || state.version)+' 업데이트') + ' · 공략 '+state.entries.length+'개' +
+        (ui.editMode && ui.canEdit ? '<label>기준일 <input id="dver" value="'+esc(D.version)+'"></label>' : esc(D.version)+' 기준') + ' · 추천덱 '+D.decks.length+'개' :
+        (ui.editMode && ui.canEdit ? '<label>버전 <input id="ver" value="'+esc(state.version)+'"></label>' : esc(state.updated || state.version)+' 업데이트') + ' · 공략 '+state.entries.length+'개' +
           (ui.fromSheet ? ' · <a href="'+SHEET_URL+'" target="_blank" rel="noopener" style="color:inherit">시트에서 수정</a>' : '')) +
       '</div></div></div>' +
-      (ui.canEdit ? '<div class="tools">' +
-        (ui.editMode ? (isGuide ? '' : isDef ? '<button class="btn" data-act="d-add">+ 방어덱 추가</button>' :
+      // GitHub 사이트: 저장 권한은 없고, 공략 수정·추가 버튼은 구글 시트를 열어줌
+      (ui.canEdit || ui.fromSheet ? '<div class="tools">' +
+        (ui.editMode && !ui.canEdit ? (isGuide || isDef ? '' : '<button class="btn" data-act="add">+ 추가</button>') :
+        ui.editMode ? (isGuide ? '' : isDef ? '<button class="btn" data-act="d-add">+ 방어덱 추가</button>' :
           '<button class="btn" data-act="add">+ 추가</button><button class="btn" data-act="import">카톡 글로 추가</button>') +
           '<button class="btn" data-act="notice">📢 공지</button><button class="btn" data-act="weekly">📋 이번 주 요약</button>' +
           '<button class="btn" data-act="portraits">초상화</button>' : '') +
