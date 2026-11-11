@@ -241,6 +241,7 @@ details.arch .list{margin-top:12px}
 .opt{display:flex;gap:8px;align-items:flex-start}
 .ono{flex:none;font-size:11.5px;color:var(--gold);background:var(--gold-bg);border-radius:6px;padding:2px 6px;margin-top:7px}
 .ob{display:grid;gap:3px;min-width:0}
+.opt .btn{margin-left:auto;flex:none;min-height:34px;padding:6px 12px}
 .opt .onames{color:var(--atk)}
 .osk{font-size:13px;color:var(--muted);padding-left:2px;line-height:1.45}
 .tbd{font-size:12.5px;color:var(--faint);font-weight:500}
@@ -764,7 +765,8 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
       '<div class="ob"><div class="orow">'+miniDeck(e.atk,'atk',ha)+'<span class="onames">'+esc(nameList(e.atk))+(isNew(e) ? '<span class="new">NEW</span>' : '')+'</span></div>' +
       '<div class="osk">'+skillText(e) +
         (e.pet && e.pet.length ? ' · 펫 '+esc(e.pet.join(e.petOr ? ' 또는 ' : ' → ')) : '') +
-        (e.dead ? ' · <span class="deadtag">폐기</span>' : '') + '</div></div></div>';
+        (e.dead ? ' · <span class="deadtag">폐기</span>' : '') + '</div></div>' +
+      (ui.editMode ? '<button class="btn" data-act="edit" data-id="'+esc(e.id)+'">수정</button>' : '') + '</div>';
   }
   function optFull(e, i, n){
     var ha = ui.mode==='atk' ? hitSet(e.atk) : null;
@@ -1137,7 +1139,10 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
   root.addEventListener('click', function(ev){
     var b = ev.target.closest('[data-act]'); if (!b) return;
     var a = b.getAttribute('data-act');
-    if (ui.fromSheet && (a === 'add' || a === 'edit' || a === 'import')){ toast('공략은 구글 시트에서 수정해요'); window.open(SHEET_URL, '_blank'); return; }
+    if (ui.fromSheet && (a === 'add' || a === 'edit' || a === 'import')){
+      var row = a === 'edit' ? String(b.getAttribute('data-id')).replace(/^r/, '') : '';
+      toast('공략은 구글 시트에서 수정해요'); window.open(SHEET_URL + (row ? '#gid=0&range=A' + row : ''), '_blank'); return;
+    }
     if (a === 'close-bg' && ev.target !== b) return;
     if (a === 'mode'){ ui.mode = b.getAttribute('data-mode'); render(); }
     else if (a === 'clear'){ ui.q=''; render(); document.getElementById('q').focus(); }
