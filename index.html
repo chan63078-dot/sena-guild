@@ -327,18 +327,30 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
   function sheetRow(e){ return [e.def.join(' '), e.atk.join(' '), e.skill || '???', (e.pet||[]).join(e.petOr ? ' or ' : ' '),
     (e.alias||[]).join('/'), e.memo || '', e.tag || '', e.src || '', e.added || '']; }
   // 운영진 비밀번호는 한 번 입력하면 이 폰에 기억
-  function sheetWrite(req, done){
+  // 요청 여러 개(카톡 글)는 하나씩 차례로 저장, 중간에 실패하면 거기서 멈춤
+  function sheetWrite(reqs, done){
+    reqs = [].concat(reqs);
     var pw = null; try { pw = localStorage.getItem('jokbo-pw'); } catch(_){}
     if (!pw) pw = prompt('운영진 비밀번호를 입력하세요');
     if (!pw) return;
-    req.pw = pw; toast('시트에 저장하는 중…');
-    fetch(SCRIPT_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(req) })
-      .then(function(r){ return r.json(); })
-      .then(function(r){
-        if (r.ok){ try { localStorage.setItem('jokbo-pw', pw); } catch(_){} done(); toast('시트에 저장했어요'); loadSheet(); return; }
-        if (r.error === 'pw'){ try { localStorage.removeItem('jokbo-pw'); } catch(_){} toast('비밀번호가 틀렸어요'); }
-        else toast('그사이 시트가 바뀌었어요. 새로고침 후 다시 해주세요.');
-      }).catch(function(){ toast('저장하지 못했어요. 인터넷 연결을 확인해 주세요.'); });
+    toast('시트에 저장하는 중…');
+    var i = 0;
+    (function next(){
+      if (i >= reqs.length){
+        try { localStorage.setItem('jokbo-pw', pw); } catch(_){}
+        done(); toast('시트에 저장했어요' + (reqs.length > 1 ? ' (' + reqs.length + '개)' : '')); loadSheet(); return;
+      }
+      var req = reqs[i]; req.pw = pw;
+      fetch(SCRIPT_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(req) })
+        .then(function(r){ return r.json(); })
+        .then(function(r){
+          if (r.ok){ i++; next(); return; }
+          var pre = i ? i + '개 저장 후 멈췄어요. ' : '';
+          if (i) loadSheet();
+          if (r.error === 'pw'){ try { localStorage.removeItem('jokbo-pw'); } catch(_){} toast(pre + '비밀번호가 틀렸어요'); }
+          else toast(pre + '그사이 시트가 바뀌었어요. 새로고침 후 다시 해주세요.');
+        }).catch(function(){ if (i) loadSheet(); toast((i ? i + '개 저장 후 멈췄어요. ' : '') + '저장하지 못했어요. 인터넷 연결을 확인해 주세요.'); });
+    })();
   }
   function parseCSV(t){
     var rows = [], row = [], f = '', q = false;
@@ -862,7 +874,7 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
       '</div></div></div>' +
       // GitHub 사이트: 저장 권한은 없고, 공략 수정·추가 버튼은 구글 시트를 열어줌
       (ui.canEdit || ui.fromSheet ? '<div class="tools">' +
-        (ui.editMode && !ui.canEdit ? (isGuide || isDef ? '' : '<button class="btn" data-act="add">+ 추가</button>') :
+        (ui.editMode && !ui.canEdit ? (isGuide || isDef ? '' : '<button class="btn" data-act="add">+ 추가</button><button class="btn" data-act="import">카톡 글로 추가</button>') :
         ui.editMode ? (isGuide ? '' : isDef ? '<button class="btn" data-act="d-add">+ 방어덱 추가</button>' :
           '<button class="btn" data-act="add">+ 추가</button><button class="btn" data-act="import">카톡 글로 추가</button>') +
           '<button class="btn" data-act="notice">📢 공지</button><button class="btn" data-act="weekly">📋 이번 주 요약</button>' +
@@ -1158,7 +1170,7 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
   root.addEventListener('click', function(ev){
     var b = ev.target.closest('[data-act]'); if (!b) return;
     var a = b.getAttribute('data-act');
-    if (ui.fromSheet && (a === 'import' || (!SCRIPT_URL && (a === 'add' || a === 'edit')))){
+    if (ui.fromSheet && !SCRIPT_URL && (a === 'add' || a === 'edit' || a === 'import')){
       var row = a === 'edit' ? String(b.getAttribute('data-id')).replace(/^r/, '') : '';
       toast('공략은 구글 시트에서 수정해요'); window.open(SHEET_URL + (row ? '#gid=0&range=A' + row : ''), '_blank'); return;
     }
@@ -1318,6 +1330,16 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
     else if (a === 'do-import'){
       var r = parseKakao(ui.sheet.text || '');
       if (!r.entries.length){ toast('족보를 읽지 못했어요. "방어 -", "공격 -" 줄이 있는지 확인해 주세요.'); return; }
+      if (ui.fromSheet){
+        var reqs = r.entries.map(function(ne){
+          var o = state.entries.filter(function(x){ return sameKey(x,ne); })[0];
+          ne.added = (o && o.added) || today();
+          if (o){ ne.tag = o.tag; ne.src = o.src; if (!ne.alias.length) ne.alias = o.alias || []; if (!ne.memo) ne.memo = o.memo; if (!ne.pet.length){ ne.pet = o.pet || []; ne.petOr = o.petOr; } }
+          return o ? { action:'save', row:o.id.slice(1), orig:[o.def.join(' '), o.atk.join(' ')], values: sheetRow(ne) } : { action:'add', values: sheetRow(ne) };
+        });
+        sheetWrite(reqs, function(){ ui.sheet = null; });
+        return;
+      }
       var added = 0, replaced = 0;
       r.entries.forEach(function(ne){
         var idx = -1;
