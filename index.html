@@ -323,7 +323,7 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
   /* ---------- 구글 시트 (공략 원본) ---------- */
   var SHEET_ID = '1cfkiYzXh2JxctCf8c-w5LEiUCTcn4e1Jir5D__SL6m0';
   var SHEET_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/edit';
-  var SCRIPT_URL = '';  // 시트 Apps Script 웹 앱 주소. 비어 있으면 수정 버튼이 시트를 열어줌
+  var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbws8B5RVecfCLgQgBn3wyv3zbtjLQH2MBBPFkdHzYxfwx5ZCTaLQ_Bsw9QDTjRdNTpO6A/exec';  // 시트 Apps Script 웹 앱 주소. 비어 있으면 수정 버튼이 시트를 열어줌
   function sheetRow(e){ return [e.def.join(' '), e.atk.join(' '), e.skill || '???', (e.pet||[]).join(e.petOr ? ' or ' : ' '),
     (e.alias||[]).join('/'), e.memo || '', e.tag || '', e.src || '', e.added || '']; }
   // 운영진 비밀번호는 한 번 입력하면 이 폰에 기억
