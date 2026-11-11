@@ -323,6 +323,23 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
   /* ---------- 구글 시트 (공략 원본) ---------- */
   var SHEET_ID = '1cfkiYzXh2JxctCf8c-w5LEiUCTcn4e1Jir5D__SL6m0';
   var SHEET_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/edit';
+  var SCRIPT_URL = '';  // 시트 Apps Script 웹 앱 주소. 비어 있으면 수정 버튼이 시트를 열어줌
+  function sheetRow(e){ return [e.def.join(' '), e.atk.join(' '), e.skill || '???', (e.pet||[]).join(e.petOr ? ' or ' : ' '),
+    (e.alias||[]).join('/'), e.memo || '', e.tag || '', e.src || '', e.added || '']; }
+  // 운영진 비밀번호는 한 번 입력하면 이 폰에 기억
+  function sheetWrite(req, done){
+    var pw = null; try { pw = localStorage.getItem('jokbo-pw'); } catch(_){}
+    if (!pw) pw = prompt('운영진 비밀번호를 입력하세요');
+    if (!pw) return;
+    req.pw = pw; toast('시트에 저장하는 중…');
+    fetch(SCRIPT_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(req) })
+      .then(function(r){ return r.json(); })
+      .then(function(r){
+        if (r.ok){ try { localStorage.setItem('jokbo-pw', pw); } catch(_){} done(); toast('시트에 저장했어요'); loadSheet(); return; }
+        if (r.error === 'pw'){ try { localStorage.removeItem('jokbo-pw'); } catch(_){} toast('비밀번호가 틀렸어요'); }
+        else toast('그사이 시트가 바뀌었어요. 새로고침 후 다시 해주세요.');
+      }).catch(function(){ toast('저장하지 못했어요. 인터넷 연결을 확인해 주세요.'); });
+  }
   function parseCSV(t){
     var rows = [], row = [], f = '', q = false;
     for (var i = 0; i < t.length; i++){
@@ -1141,7 +1158,7 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
   root.addEventListener('click', function(ev){
     var b = ev.target.closest('[data-act]'); if (!b) return;
     var a = b.getAttribute('data-act');
-    if (ui.fromSheet && (a === 'add' || a === 'edit' || a === 'import')){
+    if (ui.fromSheet && (a === 'import' || (!SCRIPT_URL && (a === 'add' || a === 'edit')))){
       var row = a === 'edit' ? String(b.getAttribute('data-id')).replace(/^r/, '') : '';
       toast('공략은 구글 시트에서 수정해요'); window.open(SHEET_URL + (row ? '#gid=0&range=A' + row : ''), '_blank'); return;
     }
@@ -1277,6 +1294,12 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
       if (!f.def.length || !f.atk.length){ toast('방어덱과 공격덱을 적어 주세요.'); return; }
       if (!f.added) f.added = today();
       f.updatedAt = today();  // NEW 표시용
+      if (ui.fromSheet){
+        var o = ui.sheet.isNew ? null : state.entries.filter(function(x){ return x.id === f.id; })[0];
+        sheetWrite({ action: o ? 'save' : 'add', row: o ? f.id.slice(1) : '', orig: o ? [o.def.join(' '), o.atk.join(' ')] : null, values: sheetRow(f) },
+          function(){ ui.sheet = null; });
+        return;
+      }
       if (ui.sheet.isNew) state.entries.push(f);
       else state.entries = state.entries.map(function(x){ return x.id===f.id ? f : x; });
       ui.sheet = null; render();
@@ -1284,6 +1307,11 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
     else if (a === 'delete'){
       if (!ui.delArm){ ui.delArm = true; ui.sheet.entry = readForm(); render(); return; }
       var did = ui.sheet.entry.id;
+      if (ui.fromSheet){
+        var od = state.entries.filter(function(x){ return x.id === did; })[0];
+        sheetWrite({ action:'delete', row: did.slice(1), orig: [od.def.join(' '), od.atk.join(' ')] }, function(){ ui.sheet = null; ui.delArm = false; });
+        return;
+      }
       state.entries = state.entries.filter(function(x){ return x.id !== did; });
       ui.sheet = null; ui.delArm=false; render();
     }
@@ -1325,7 +1353,8 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
   })();
 
   /* ---------- 시트에서 공략 읽기 (실패하면 페이지에 저장된 공략 그대로) ---------- */
-  fetch('https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent('공략'))
+  function loadSheet(){
+  fetch('https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent('공략') + '&_=' + Date.now())
     .then(function(r){ return r.ok ? r.text() : Promise.reject(r.status); })
     .then(function(t){
       var es = sheetEntries(parseCSV(t));
@@ -1334,6 +1363,8 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
       state.entries = es; if (last) state.updated = last.slice(5).replace('-', '.');
       saved = JSON.stringify(state); ui.fromSheet = true; render();
     }).catch(function(){});
+  }
+  loadSheet();
 
   /* ---------- 운영진 권한 확인 ---------- */
   if (window.claude && window.claude.use){
