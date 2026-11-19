@@ -325,7 +325,7 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
   var SHEET_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/edit';
   var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbws8B5RVecfCLgQgBn3wyv3zbtjLQH2MBBPFkdHzYxfwx5ZCTaLQ_Bsw9QDTjRdNTpO6A/exec';  // 시트 Apps Script 웹 앱 주소. 비어 있으면 수정 버튼이 시트를 열어줌
   function sheetRow(e){ return [e.def.join(' '), e.atk.join(' '), e.skill || '???', (e.pet||[]).join(e.petOr ? ' or ' : ' '),
-    (e.alias||[]).join('/'), e.memo || '', e.tag || '', e.src || '', e.added || '']; }
+    (e.alias||[]).join('/'), e.memo || '', e.tag || '', e.src || '', e.updatedAt || e.added || '']; }  // 날짜 칸 = 마지막으로 추가·수정한 날 (최근 것 위로 정렬용)
   // 운영진 비밀번호는 한 번 입력하면 이 폰에 기억
   // 요청 여러 개(카톡 글)는 하나씩 차례로 저장, 중간에 실패하면 거기서 멈춤
   function sheetWrite(reqs, done){
@@ -754,6 +754,8 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
   function grpKey(e){ return e.def.slice().sort().join('|'); }
   function groupsOf(items){
     var order = state.entries.map(function(e){ return e.id; });
+    // 최근에 추가·수정한 날짜 순, 같은 날이면 나중 줄 먼저
+    function rec(e){ return (e.updatedAt || e.added || '') + ('00000' + order.indexOf(e.id)).slice(-5); }
     var map = {}, list = [];
     items.forEach(function(e){
       var k = grpKey(e);
@@ -762,15 +764,15 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
     });
     list.forEach(function(g){
       // 살아 있는 공략 먼저, 그 안에서는 최신(나중에 추가한 것) 먼저
-      g.items.sort(function(a,b){ return ((a.dead?1:0) - (b.dead?1:0)) || (order.indexOf(b.id) - order.indexOf(a.id)); });
+      g.items.sort(function(a,b){ return ((a.dead?1:0) - (b.dead?1:0)) || (rec(b) < rec(a) ? -1 : rec(b) > rec(a) ? 1 : 0); });
       g.dead = g.items.every(function(e){ return e.dead; });
-      g.newest = Math.max.apply(null, g.items.map(function(e){ return order.indexOf(e.id); }));
+      g.newest = g.items.map(rec).sort().pop();
       // 링크용 이름: 이 방어덱의 가장 오래된 공략 id (공략이 추가돼도 안 바뀜)
       g.anchor = g.items.slice().sort(function(a,b){ return order.indexOf(a.id) - order.indexOf(b.id); })[0].id;
       g.isNew = g.items.some(isNew);
     });
     // 폐기만 남은 방어덱은 맨 아래, 즐겨찾기 ★ 먼저, 나머지는 최근에 공략이 추가된 방어덱 먼저
-    list.sort(function(a,b){ return ((a.dead?1:0) - (b.dead?1:0)) || ((ui.fav[b.key]?1:0) - (ui.fav[a.key]?1:0)) || (b.newest - a.newest); });
+    list.sort(function(a,b){ return ((a.dead?1:0) - (b.dead?1:0)) || ((ui.fav[b.key]?1:0) - (ui.fav[a.key]?1:0)) || (b.newest < a.newest ? -1 : b.newest > a.newest ? 1 : 0); });
     return list;
   }
   function countText(items){
@@ -1333,7 +1335,7 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
       if (ui.fromSheet){
         var reqs = r.entries.map(function(ne){
           var o = state.entries.filter(function(x){ return sameKey(x,ne); })[0];
-          ne.added = (o && o.added) || today();
+          ne.added = (o && o.added) || today(); ne.updatedAt = today();
           if (o){ ne.tag = o.tag; ne.src = o.src; if (!ne.alias.length) ne.alias = o.alias || []; if (!ne.memo) ne.memo = o.memo; if (!ne.pet.length){ ne.pet = o.pet || []; ne.petOr = o.petOr; } }
           return o ? { action:'save', row:o.id.slice(1), orig:[o.def.join(' '), o.atk.join(' ')], values: sheetRow(ne) } : { action:'add', values: sheetRow(ne) };
         });
