@@ -321,6 +321,16 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
 .brand .meta a{white-space:nowrap}
 .count{font-weight:600}
 .tabs button[aria-selected="true"]{color:var(--accent)}
+.dcard{border-left:4px solid var(--def)}
+.dhead{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:800;color:var(--ink);margin-bottom:2px}
+.dhead span{font-size:12px;font-weight:600;color:var(--muted);margin-left:auto}
+.dno{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--def);color:var(--surface);font-size:13.5px;font-variant-numeric:tabular-nums}
+.dcard .hero .pt{max-width:72px}
+.btn.counter{background:var(--atk-bg);color:var(--atk);border-color:transparent;font-weight:700}
+.dintro b{font-size:17px}
+.rsub{white-space:normal;max-width:50%;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.rcard .rt{word-break:keep-all}
+.rcard{background:var(--surface)}
 </style>
 
 </head>
@@ -544,10 +554,10 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
         (ui.editMode ? '<button class="btn" data-act="edit" data-id="'+esc(e.id)+'">수정</button>' : '') + '</div>' : '') +
       '</article>';
   }
-  function defCardHTML(d, old){
+  function defCardHTML(d, old, i){
     var sk = d.skills || [];
-    return '<article class="card">' +
-      '<div class="sect"><div class="lbl def">추천 방어덱</div>' + namesHTML(d.heroes,'def',null) + '</div>' +
+    return '<article class="card dcard">' +
+      '<div class="sect"><div class="dhead"><b class="dno">'+(i+1)+'</b>'+esc(deckShort(d))+'<span>추천 방어덱</span></div>' + namesHTML(d.heroes,'def',null) + '</div>' +
       (d.pet && d.pet.length ? '<div class="sect"><div class="lbl pet">펫'+(d.pet.length>1?' (하나만)':'')+'</div>' + petsHTML(d.pet,'or') + '</div>' : '') +
       (sk.length ? '<div class="sect"><div class="lbl sk">스킬 순서</div>' + sk.map(function(x,i){
         return '<div class="plan">' + (sk.length > 1 ? '<small>'+(i+1)+'안</small>' : '') + stepsHTML(x, d.heroes) + '</div>';
@@ -766,12 +776,12 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
   }
   // 이번 방어 추천덱을 빠른 검색 버튼으로 (공격 족보의 줄임말이 있으면 그 이름으로)
   function quickDecks(){
-    return (state.defense.decks || []).map(function(d){
-      var key = d.heroes.slice().sort().join('|'), alias = '';
-      state.entries.forEach(function(e){ if (!alias && grpKey(e) === key && e.alias && e.alias.length) alias = e.alias[0]; });
-      var short = alias || d.heroes.map(function(n){ return n === '*' ? '' : Array.from(n)[0]; }).join('') + (d.heroes.indexOf('*') >= 0 ? '+' : '');
-      return { label: short, q: deckQuery(d.heroes) };
-    });
+    return (state.defense.decks || []).map(function(d){ return { label: deckShort(d), q: deckQuery(d.heroes) }; });
+  }
+  function deckShort(d){
+    var key = d.heroes.slice().sort().join('|'), alias = '';
+    state.entries.forEach(function(e){ if (!alias && grpKey(e) === key && e.alias && e.alias.length) alias = e.alias[0]; });
+    return alias || d.heroes.map(function(n){ return n === '*' ? '' : Array.from(n)[0]; }).join('') + (d.heroes.indexOf('*') >= 0 ? '+' : '');
   }
 
   /* ---------- 방어덱별로 묶어서 접힌 카드로 보여주기 ---------- */
@@ -926,7 +936,7 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
             }).join('') + '</div>' : '') +
             '<div class="dintro"><b>'+esc(sel.version)+' 기준 길드전 방어 추천덱</b>' +
               (sel.cur ? '' : '<br>예전 버전이에요. 최신 추천덱은 맨 앞 버튼을 누르세요.') + '</div>' +
-            '<div class="list">' + (sel.decks.length ? sel.decks.map(function(d){ return defCardHTML(d, !sel.cur); }).join('') : '<div class="empty">아직 추천덱이 없어요.</div>') + '</div>';
+            '<div class="list">' + (sel.decks.length ? sel.decks.map(function(d,i){ return defCardHTML(d, !sel.cur, i); }).join('') : '<div class="empty">아직 추천덱이 없어요.</div>') + '</div>';
         })() +
         '</div>'
       :
