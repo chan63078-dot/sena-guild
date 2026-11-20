@@ -297,6 +297,30 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
 .sheet .acts .spacer{flex:1}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:84px;z-index:40;background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:14px;max-width:calc(100% - 32px)}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
+/* ---- 디자인 다듬기 (11.20): 카드 그림자, 방어덱 색 띠, 공격안 묶음 박스 ---- */
+:root{--shadow:0 1px 2px rgba(20,24,34,.05),0 4px 14px rgba(20,24,34,.06)}
+:root[data-theme="dark"]{--shadow:0 1px 2px rgba(0,0,0,.3)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--shadow:0 1px 2px rgba(0,0,0,.3)}}
+.card,.gsec,.glink{box-shadow:var(--shadow);border-color:transparent}
+.grp{border-left:4px solid var(--def);padding:13px 14px 14px 13px;gap:10px}
+.grp.dead{border-left-color:var(--line)}
+.glbl{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-weight:600;color:var(--muted);letter-spacing:0}
+.glbl b{color:var(--def);font-weight:800}
+.glbl .new{margin-left:0}
+.ghead .mini .pt{width:42px;height:42px;border-radius:10px;box-shadow:0 0 0 2px var(--def-bg)}
+.ghead .onames{font-size:16.5px;color:var(--ink)}
+.ghead .chev{display:grid;place-items:center;width:30px;height:30px;padding:0;font-size:13px;background:var(--surface-2);border-radius:50%;color:var(--muted)}
+.opts{border-top:0;padding-top:0;gap:6px}
+.opt{background:var(--atk-bg);border-radius:12px;padding:8px 10px;align-items:center}
+.opt .onames{font-size:15px}
+.mini.atk .pt{width:34px;height:34px}
+.ono{margin-top:0;background:var(--surface);color:var(--atk);font-weight:800}
+.osk{color:var(--ink);opacity:.75}
+.field input{box-shadow:var(--shadow);border-color:transparent}
+.field input:focus{border-color:var(--focus)}
+.brand .meta a{white-space:nowrap}
+.count{font-weight:600}
+.tabs button[aria-selected="true"]{color:var(--accent)}
 </style>
 
 </head>
@@ -823,8 +847,8 @@ details.memo p{white-space:pre-wrap;margin:6px 0 0;font-size:15px;line-height:1.
     return '<article class="card grp'+(g.dead?' dead':'')+'" id="g-'+esc(g.anchor)+'">' +
       '<button class="star" data-act="fav" data-k="'+esc(g.key)+'" aria-pressed="'+fav+'" aria-label="즐겨찾기">'+(fav ? '★' : '☆')+'</button>' +
       '<button class="ghead" data-act="gtoggle" data-k="'+esc(g.key)+'" aria-expanded="'+open+'">' +
-        '<span class="glbl">상대 방어덱'+(alias.length ? ' · '+esc(alias.join(' · ')) : '')+(g.items.length > 1 ? ' · 공략 '+g.items.length+'개' : '')+(g.isNew ? '<span class="new">NEW</span>' : '')+'</span>' +
-        '<span class="orow">'+miniDeck(g.def,'def',hd)+'<span class="onames">'+esc(nameList(g.def))+'</span><span class="chev">'+(open ? '접기 ▴' : '자세히 ▾')+'</span></span>' +
+        '<span class="glbl">'+(g.isNew ? '<span class="new">NEW</span>' : '')+'<b>상대 방어덱</b>'+(alias.length ? ' '+esc(alias.join(' · ')) : '')+(g.items.length > 1 ? ' · 공략 '+g.items.length+'개' : '')+'</span>' +
+        '<span class="orow">'+miniDeck(g.def,'def',hd)+'<span class="onames">'+esc(nameList(g.def))+'</span><span class="chev" aria-hidden="true">'+(open ? '▴' : '▾')+'</span></span>' +
         (tags.length ? '<span class="gtags">'+tags.map(function(t){ return '<span>'+esc(t)+'</span>'; }).join('')+'</span>' : '') +
       '</button>' +
       (open ? '<div class="gbody">' + g.items.map(function(e,i){ return optFull(e, i, g.items.length); }).join('') +
